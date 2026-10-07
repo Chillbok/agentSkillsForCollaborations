@@ -8,7 +8,8 @@ param(
   [string]$Agents = "",
   [switch]$Gitignore,
   [switch]$Tracked,
-  [switch]$Force
+  [switch]$Force,
+  [switch]$WithGh
 )
 
 $ErrorActionPreference = "Stop"
@@ -119,6 +120,53 @@ if ($Gitignore -and $IsGit -and $ignoreRel.Count -gt 0) {
 }
 
 if ($Cleanup) { Remove-Item -Recurse -Force $Cleanup }
+
+# ── 사전 요구사항 (git / gh) ────────────────────────────────
+Write-Host ""
+Write-Host "=== 사전 요구사항 ==="
+
+try {
+  Write-Host "  [OK] git: $(git --version)"
+} catch {
+  Write-Host "  [X] git이 없습니다. https://git-scm.com 에서 설치하세요." -ForegroundColor Red
+}
+
+function Install-Gh {
+  if (Get-Command winget -ErrorAction SilentlyContinue) {
+    Write-Host "  실행: winget install --id GitHub.cli"
+    winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements
+  } elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
+    Write-Host "  실행: scoop install gh"
+    scoop install gh
+  } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+    Write-Host "  실행: choco install gh -y"
+    choco install gh -y
+  } else {
+    Write-Host "  패키지 매니저(winget/scoop/choco)를 찾지 못했습니다. https://github.com/cli/cli/releases 에서 설치하세요." -ForegroundColor Red
+    return $false
+  }
+  return $true
+}
+
+if (Get-Command gh -ErrorAction SilentlyContinue) {
+  $ghv = (gh --version | Select-Object -First 1)
+  Write-Host "  [OK] gh: $ghv"
+  gh auth status *> $null
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "  [OK] gh 인증됨"
+  } else {
+    Write-Host "  [ ] gh 인증이 필요합니다. 'gh auth login' 을 실행하세요."
+  }
+} elseif ($WithGh) {
+  Write-Host "  [ ] gh가 없어 설치를 시도합니다."
+  if ((Install-Gh) -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Host "  [OK] gh 설치됨. 다음: 'gh auth login' 으로 인증하세요."
+  } else {
+    Write-Host "  [X] gh 자동 설치 실패. https://github.com/cli/cli/releases 를 참고하세요." -ForegroundColor Red
+  }
+} else {
+  Write-Host "  [ ] gh가 없습니다(issue-create/pr-create에 필요). -WithGh 로 함께 설치할 수 있습니다."
+}
 
 Write-Host ""
 Write-Host "설치 완료. 에이전트를 재시작하면 스킬이 인식됩니다."

@@ -11,6 +11,8 @@
 #   --gitignore              스킬 경로를 타깃 .gitignore에 추가 (개인 설치)
 #   --tracked                .gitignore를 건드리지 않음 (팀 공유)
 #   --force                  이미 설치된 스킬을 덮어씀
+#   --with-gh                GitHub CLI(gh)가 없으면 함께 설치
+#   --prerequisites          --with-gh 와 동일
 #   -h, --help               도움말
 set -euo pipefail
 
@@ -20,6 +22,7 @@ TARGET="."
 AGENTS=""
 GITIGNORE_MODE=""   # "", "gitignore", "tracked"
 FORCE=0
+WITH_GH=0
 
 usage() {
   sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
@@ -31,6 +34,7 @@ while [ $# -gt 0 ]; do
     --gitignore) GITIGNORE_MODE="gitignore"; shift ;;
     --tracked) GITIGNORE_MODE="tracked"; shift ;;
     --force) FORCE=1; shift ;;
+    --with-gh|--prerequisites) WITH_GH=1; shift ;;
     -h|--help) usage; exit 0 ;;
     --*) echo "알 수 없는 옵션: $1" >&2; exit 1 ;;
     *) TARGET="$1"; shift ;;
@@ -146,6 +150,76 @@ elif [ "$is_git" -eq 1 ] && [ -n "$ignore_rel" ]; then
   echo "질문: 이 스킬들을 커밋(팀 공유)할까요, 개인 설치로 두고 .gitignore에 추가할까요?"
   echo "  · 개인 설치: 이 스크립트를 --gitignore 로 다시 실행"
   echo "  · 팀 공유:   그대로 커밋 (--tracked)"
+fi
+
+# ── 사전 요구사항 (git / gh) ────────────────────────────────
+echo
+echo "=== 사전 요구사항 ==="
+
+if command -v git >/dev/null 2>&1; then
+  echo "  [OK] git: $(git --version)"
+else
+  echo "  [X] git이 없습니다. https://git-scm.com 에서 설치하세요." >&2
+fi
+
+install_gh() {
+  local os; os="$(uname -s)"
+  case "$os" in
+    Darwin)
+      if command -v brew >/dev/null 2>&1; then
+        echo "  실행: brew install gh"
+        brew install gh
+      else
+        echo "  Homebrew가 없습니다. https://github.com/cli/cli/releases 에서 설치하세요." >&2
+        return 1
+      fi ;;
+    Linux)
+      if command -v apt-get >/dev/null 2>&1; then
+        echo "  실행: 공식 apt repo 등록 후 sudo apt-get install gh (비밀번호 입력 필요)"
+        type -p wget >/dev/null || sudo apt-get install -y wget
+        sudo mkdir -p -m 755 /etc/apt/keyrings
+        wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+          | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+        sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+          | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+        sudo apt-get update && sudo apt-get install -y gh
+      elif command -v dnf >/dev/null 2>&1; then
+        echo "  실행: sudo dnf install -y gh"
+        sudo dnf install -y gh
+      elif command -v pacman >/dev/null 2>&1; then
+        echo "  실행: sudo pacman -S --noconfirm github-cli"
+        sudo pacman -S --noconfirm github-cli
+      elif command -v snap >/dev/null 2>&1; then
+        echo "  실행: sudo snap install gh"
+        sudo snap install gh
+      else
+        echo "  패키지 매니저를 찾지 못했습니다. https://github.com/cli/cli/releases 에서 설치하세요." >&2
+        return 1
+      fi ;;
+    *)
+      echo "  지원하지 않는 OS: $os. https://github.com/cli/cli/releases 에서 설치하세요." >&2
+      return 1 ;;
+  esac
+}
+
+if command -v gh >/dev/null 2>&1; then
+  echo "  [OK] gh: $(gh --version | head -1)"
+  if gh auth status >/dev/null 2>&1; then
+    echo "  [OK] gh 인증됨"
+  else
+    echo "  [ ] gh 인증이 필요합니다. 터미널에서 'gh auth login' 을 실행하세요."
+  fi
+elif [ "$WITH_GH" -eq 1 ]; then
+  echo "  [ ] gh가 없어 설치를 시도합니다."
+  if install_gh && command -v gh >/dev/null 2>&1; then
+    echo "  [OK] gh 설치됨: $(gh --version | head -1)"
+    echo "  다음: 'gh auth login' 으로 인증하세요."
+  else
+    echo "  [X] gh 자동 설치 실패. https://github.com/cli/cli/releases 를 참고하세요." >&2
+  fi
+else
+  echo "  [ ] gh가 없습니다(issue-create/pr-create에 필요). --with-gh 로 함께 설치할 수 있습니다."
 fi
 
 echo

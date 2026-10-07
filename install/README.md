@@ -9,10 +9,10 @@
 ```text
 이 프로젝트에 협업용 git 스킬을 설치해줘.
 1. https://github.com/Chillbok/agentSkillsForCollaborations 를 임시 폴더에 clone
-2. install/install.sh . 를 실행해 .agents/skills/ 와 .claude/skills/ 에 스킬을 복사
-3. 설치된 스킬 목록을 확인해서 보고해줘
-4. 설치 후, 이 스킬들을 커밋(팀 공유)할지 개인 설치로 두고 .gitignore에 추가할지 나에게 물어보고,
-   내 결정대로 처리해줘 (개인 설치면 --gitignore 로 재실행, 팀 공유면 --tracked)
+2. install/install.sh . --with-gh 를 실행해 .agents/skills/ 와 .claude/skills/ 에 스킬을 복사하고,
+   GitHub CLI(gh)가 없으면 함께 설치해줘 (설치 명령은 실행 전에 나에게 확인받고)
+3. 설치된 스킬 목록과 gh 상태를 확인해서 보고해줘
+4. 이 스킬들을 커밋(팀 공유)할지 개인 설치로 두고 .gitignore에 추가할지 나에게 물어보고 결정대로 처리
 ```
 
 Windows(PowerShell)라면:
@@ -20,8 +20,8 @@ Windows(PowerShell)라면:
 ```text
 이 프로젝트에 협업용 git 스킬을 설치해줘.
 1. https://github.com/Chillbok/agentSkillsForCollaborations 를 임시 폴더에 clone
-2. install/install.ps1 -Target . 를 실행
-3. 설치된 스킬 목록을 확인해서 보고
+2. install/install.ps1 -Target . -WithGh 를 실행 (gh 없으면 함께 설치)
+3. 설치된 스킬 목록과 gh 상태를 확인해서 보고
 4. 커밋할지 개인 설치(gitignore)로 둘지 물어보고 결정대로 처리
 ```
 
@@ -48,6 +48,7 @@ powershell -ExecutionPolicy Bypass -File $env:TEMP\agsk\install\install.ps1 -Tar
 | `--gitignore` / `-Gitignore` | 스킬 경로를 `.gitignore`에 추가 (개인 설치) |
 | `--tracked` / `-Tracked` | `.gitignore`를 건드리지 않음 (팀 공유) |
 | `--force` / `-Force` | 이미 설치된 스킬을 덮어씀 |
+| `--with-gh` / `-WithGh` (`--prerequisites`) | GitHub CLI(gh)가 없으면 함께 설치 (macOS/Linux/Windows) |
 | `-h`, `--help` | 도움말 |
 
 > 옵션 없이 실행하면 `.gitignore`를 **수정하지 않고**, 커밋/개인설치 여부를 묻는 문구만 출력합니다. 결정은 AI가 사용자에게 물어 처리합니다.
@@ -57,3 +58,6 @@ powershell -ExecutionPolicy Bypass -File $env:TEMP\agsk\install\install.ps1 -Tar
 1. 스킬 저장소를 확보(로컬이면 그대로, 아니면 임시 clone)
 2. `skills/*/`를 `.agents/skills/` + `.claude/skills/`로 복사 (기본)
 3. `.gitignore` 현재 상태 진단 + 질문 출력
+4. 사전 요구사항(git/gh) 상태 확인 — `--with-gh`면 gh 미설치 시 함께 설치
+
+> gh 설치 명령은 실행 전에 사용자에게 제시되어 동의를 받습니다(AI 지시문 기준). `sudo`/UAC 비밀번호는 사용자가 직접 입력합니다.
