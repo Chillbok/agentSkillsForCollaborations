@@ -8,21 +8,38 @@ OpenCode, Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot 등 [agentskill
 
 | 스킬 | 역할 | gh 필요 |
 |---|---|---|
+| `git-workflow` | 4단계 루틴 안내·상태 진단·다음 단계 라우팅 (진입점) | ✗ |
 | `issue-create` | 작업 설명 → 이슈 생성 (표준 제목/라벨), 이슈 번호 보고 | ✓ |
 | `branch-create` | 이슈 번호·type 확인 → `<type>/#<N>` 브랜치 생성 | 선택 |
 | `commit` | 저장소 관례 탐지 → 커밋 생성/양식 수정 (Unity 사전 점검) | ✗ |
 | `pr-create` | 이슈(계획)와 실제 구현을 대조 → 차이·이유 정리 → PR 생성 | ✓ |
 
-각 스킬은 **자기완결**입니다. 다른 스킬이나 특정 앱의 기능에 의존하지 않고, `git` / `gh` CLI와 파일시스템만 사용합니다.
+각 스킬은 **자기완결**입니다. 다른 앱의 기능에 의존하지 않고, `git` / `gh` CLI와 파일시스템만 사용합니다. `git-workflow`는 형제 스킬을 이름 수준에서 안내·라우팅하는 진입점입니다(설치 시 함께 복사됨).
 
 ## 워크플로우
 
 ```
+git-workflow  →  현재 상태 진단 + 다음 단계 라우팅 (진입점)
 1. issue-create    → 이슈 #N 생성
 2. branch-create   → feat/#N 브랜치
 3. commit          → 작업하며 커밋 (간단히 커밋 후 양식 수정)
 4. pr-create       → 이슈 대비 변경을 정리해 PR 생성
 ```
+
+## 자동 호출 (트리거 예시)
+
+스킬은 별도 호출 없이 **요청 내용에 따라 자동 로드**됩니다. 아래처럼 말하면 해당 스킬이 뜹니다.
+
+| 이렇게 말하면 | 호출되는 스킬 |
+|---|---|
+| "작업 시작하자", "루틴대로 하자", "다음 뭐 해야 해", "어디까지 했는지" | `git-workflow` |
+| "이슈 만들어줘", "계획용 이슈 좀" | `issue-create` |
+| "5번 이슈로 브랜치 파줘" | `branch-create` |
+| "커밋해줘", "마지막 커밋 양식에 맞게 수정" | `commit` |
+| "PR 만들어줘", "이 브랜치 PR 올려줘" | `pr-create` |
+
+> 개별 스킬은 **행위** 표현에, `git-workflow`는 **흐름·진단** 표현에 반응하도록 트리거를 분리했습니다. 설치 후 앱/세션을 재시작해야 스킬이 스캔됩니다. 자동 로딩을 지원하지 않는 앱은 [docs/install-no-skill-support.md](docs/install-no-skill-support.md)를 참고하세요.
+
 
 ## 빠른 설치 (AI에게 지시)
 
@@ -31,12 +48,13 @@ OpenCode, Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot 등 [agentskill
 ```text
 이 프로젝트에 협업용 git 스킬을 설치해줘.
 1. https://github.com/Chillbok/agentSkillsForCollaborations 를 임시 폴더에 clone
-2. install/install.sh . 를 실행해 .agents/skills/ 와 .claude/skills/ 에 스킬을 복사
-3. 설치된 스킬 목록을 확인해서 보고해줘
+2. install/install.sh . --with-gh 를 실행해 .agents/skills/ 와 .claude/skills/ 에 스킬을 복사하고,
+   GitHub CLI(gh)가 없으면 함께 설치해줘 (설치 명령은 실행 전에 나에게 확인받고)
+3. 설치된 스킬 목록과 gh 상태를 확인해서 보고해줘
 4. 이 스킬들을 커밋(팀 공유)할지 개인 설치로 두고 .gitignore에 추가할지 나에게 물어보고 결정대로 처리
 ```
 
-Windows는 `install/install.ps1 -Target .` 를 사용합니다. 자세한 내용은 [install/README.md](install/README.md).
+Windows는 `install/install.ps1 -Target . -WithGh` 를 사용합니다. 자세한 내용은 [install/README.md](install/README.md).
 
 ## 설치 방법
 
@@ -87,6 +105,7 @@ type 어휘를 하나로 통일합니다: `feat`, `fix`, `refactor`, `docs`, `ch
 
 ```
 skills/
+├── git-workflow/      SKILL.md (진입점·라우터)
 ├── commit/            SKILL.md + references/unity-git-guard.md
 ├── issue-create/      SKILL.md + references/{issue-template,gh-setup}.md
 ├── branch-create/     SKILL.md
